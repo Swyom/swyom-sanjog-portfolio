@@ -1,4 +1,5 @@
 import { Project, Service, TechSkill, Testimonial, Certificate, BlogPost, Stat } from '../types';
+import { getAssetUrl } from '../utils/assets';
 
 export const HERO_DATA = {
   name: "P SWYOM SANJOG",
@@ -9,7 +10,7 @@ export const HERO_DATA = {
 
   ],
   bio: "I like turning ideas into real apps that people can actually use. I focus on building things that are simple, useful, and work smoothly.",
-  avatarUrl: "./assets/swyomIMG.png",
+  avatarUrl: getAssetUrl('assets/swyomIMG.png'),
   avatarFallbackUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80",
   codeSnippet: `class Developer {
   name = 'P Swyom Sanjog';
@@ -257,7 +258,7 @@ export const CERTIFICATES_DATA: Certificate[] = [
     issuer: 'GenAI & Artificial Intelligence',
     issueDate: '2024',
     credentialId: 'GEN-AI-2024',
-    image: './assets/GEN AI certificate.png',
+    image: getAssetUrl('assets/GEN AI certificate.png'),
     skills: ['Generative AI', 'Prompt Engineering', 'AI Solutions', 'LLMs'],
     featured: true
   },
@@ -267,7 +268,7 @@ export const CERTIFICATES_DATA: Certificate[] = [
     issuer: 'Software Engineering Certification',
     issueDate: '2024',
     credentialId: 'WEB-INT-2024',
-    image: './assets/webdev-internship.webp',
+    image: getAssetUrl('assets/webdev-internship.webp'),
     skills: ['HTML/CSS', 'JavaScript', 'React', 'Frontend Engineering'],
     featured: true
   },
@@ -277,7 +278,7 @@ export const CERTIFICATES_DATA: Certificate[] = [
     issuer: 'Mobile Engineering Certification',
     issueDate: '2024',
     credentialId: 'AND-INT-2024',
-    image: './assets/android-internship.webp',
+    image: getAssetUrl('assets/android-internship.webp'),
     skills: ['Android Dev', 'React Native', 'Mobile UI/UX', 'App Architecture'],
     featured: true
   },
@@ -287,7 +288,7 @@ export const CERTIFICATES_DATA: Certificate[] = [
     issuer: 'Festronix Tech Summit',
     issueDate: '2024',
     credentialId: 'FEST-HACK-2024',
-    image: './assets/festronix-hackathon.webp',
+    image: getAssetUrl('assets/festronix-hackathon.webp'),
     skills: ['Rapid Prototyping', 'Full-Stack MVP', 'Problem Solving'],
     featured: true
   },
@@ -297,7 +298,7 @@ export const CERTIFICATES_DATA: Certificate[] = [
     issuer: 'Big Data Specialization',
     issueDate: '2024',
     credentialId: 'BD-INT-8832',
-    image: './assets/big-data-integration.webp',
+    image: getAssetUrl('assets/big-data-integration.webp'),
     skills: ['Data Processing', 'FastAPI', 'Backend Systems', 'Pipelines'],
     featured: true
   },
@@ -307,7 +308,7 @@ export const CERTIFICATES_DATA: Certificate[] = [
     issuer: 'Data Engineering Certification',
     issueDate: '2024',
     credentialId: 'BD-MOD-9941',
-    image: './assets/big-data-modeling.webp',
+    image: getAssetUrl('assets/big-data-modeling.webp'),
     skills: ['Database Architecture', 'MongoDB', 'PostgreSQL', 'Data Schemas'],
     featured: true
   },
@@ -317,7 +318,7 @@ export const CERTIFICATES_DATA: Certificate[] = [
     issuer: 'AI & Data Science Certification',
     issueDate: '2024',
     credentialId: 'ML-BD-1102',
-    image: './assets/machine-learning-bigdata.webp',
+    image: getAssetUrl('assets/machine-learning-bigdata.webp'),
     skills: ['Machine Learning', 'Python', 'Data Analytics', 'Model Evaluation'],
     featured: true
   }

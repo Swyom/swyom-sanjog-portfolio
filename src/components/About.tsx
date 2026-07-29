@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { ABOUT_DATA } from '../data/portfolioData';
 import { Monitor, Code2, Zap, UserCheck, Terminal } from 'lucide-react';
 import gsap from 'gsap';
+import { getAssetUrl } from '../utils/assets';
 
 interface AboutProps {
   onOpenModal: () => void;
@@ -71,11 +72,11 @@ export const About: React.FC<AboutProps> = ({ onOpenModal }) => {
             {/* Image Container - Perfectly Fits imagepose.png */}
             <div className="relative z-10 my-3 w-full h-64 sm:h-72 rounded-xl overflow-hidden border border-[#262638] bg-[#0c0c14] group-hover:border-[#ff5e18]/40 transition-colors">
               <img
-                src="./assets/imagepose.png"
+                src={getAssetUrl('assets/imagepose.png')}
                 alt="P. Swyom Sanjog Pose"
                 className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500 filter brightness-95 contrast-105"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = './assets/swyomIMG.png';
+                  (e.target as HTMLImageElement).src = getAssetUrl('assets/swyomIMG.png');
                 }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#12121a] via-transparent to-transparent opacity-50" />

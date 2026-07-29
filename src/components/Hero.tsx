@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { HERO_DATA, STATS_DATA } from '../data/portfolioData';
 import { ArrowRight, Download, Github, Linkedin, Twitter, Dribbble, Mail, Smile, Code, Star, Eye, Instagram } from 'lucide-react';
 import gsap from 'gsap';
+import { getAssetUrl } from '../utils/assets';
 
 interface HeroProps {
   onNavigate: (sectionId: string) => void;
@@ -170,7 +171,7 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate, onOpenResume }) => {
               </button>
 
               <a
-                href="./assets/Swyom Resume.pdf"
+                href={getAssetUrl('assets/Swyom Resume.pdf')}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group inline-flex items-center gap-2.5 px-6 py-3.5 rounded-lg font-bold text-sm text-gray-200 bg-[#12121a] border border-[#2a2a3a] hover:border-[#ff5e18] hover:text-white transition-all duration-300 hover:scale-105 cursor-pointer"
