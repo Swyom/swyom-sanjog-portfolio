@@ -11,11 +11,40 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="/swyom-sanjog-portfolio/assets/index-8AX09PYr.js"></script>
-    <link rel="stylesheet" crossorigin href="/swyom-sanjog-portfolio/assets/index-CNEZDmFI.css">
+    <script type="module" crossorigin src="/swyom-sanjog-portfolio/assets/index-DvKe6EWi.js"></script>
+    <link rel="stylesheet" crossorigin href="/swyom-sanjog-portfolio/assets/index-DuAzbLd6.css">
   </head>
   <body class="bg-[#08080c] text-[#e2e8f0] antialiased selection:bg-[#ff5e18] selection:text-white">
-    <div id="root"></div>
+    <div id="root">
+      <style>
+        .initial-loader {
+          position: fixed;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background-color: #08080c;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 99999;
+        }
+        .loader-orb {
+          width: 90px;
+          height: 90px;
+          background-color: #ff5e18;
+          border-radius: 50%;
+          box-shadow: -15px -15px 15px #ff6600, 15px -15px 15px #ff9100, 15px 15px 15px #ff5500, -15px 15px 15px #ffa600, -15px 0 15px #ff6600, 15px 0 15px #ffcc00;
+          animation: orb-rotate 1.2s infinite ease-in-out;
+          transform: rotate(0) scale(0.85);
+        }
+        @keyframes orb-rotate {
+          0% { transform: rotate(360deg) scale(0.85); }
+          50% { transform: rotate(0) scale(1.15); }
+          100% { transform: rotate(360deg) scale(0.85); }
+        }
+      </style>
+      <div class="initial-loader">
+        <div class="loader-orb"></div>
+      </div>
+    </div>
   </body>
 </html>
 
