@@ -15,6 +15,7 @@ import { ServiceModal } from './components/ServiceModal';
 import { CustomCursor } from './components/CustomCursor';
 import { RevealOnScroll } from './components/RevealOnScroll';
 import { SecurityGuard } from './components/SecurityGuard';
+import { Preloader } from './components/Preloader';
 import { Project, Service } from './types';
 
 export default function App() {
@@ -64,6 +65,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#08080c] text-[#e2e8f0] selection:bg-[#ff5e18] selection:text-white relative">
+      <Preloader />
       <SecurityGuard />
 
       {/* Header Navigation */}
