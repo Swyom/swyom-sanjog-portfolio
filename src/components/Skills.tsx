@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { TECH_STACK } from '../data/portfolioData';
 import { TechSkill } from '../types';
-import { Code, CheckCircle2 } from 'lucide-react';
-import gsap from 'gsap';
+import { Code } from 'lucide-react';
+import { useReveal } from '../hooks/useReveal';
 
 const BRAND_ICON_URLS: Record<string, string> = {
   html5: 'https://cdn.jsdelivr.net/gh/devicons/devicon/icons/html5/html5-original.svg',
@@ -28,23 +28,17 @@ const BRAND_ICON_URLS: Record<string, string> = {
 export const Skills: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [selectedSkill, setSelectedSkill] = useState<TechSkill | null>(TECH_STACK[3]); // Default React
-  const sectionRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!sectionRef.current) return;
-    const ctx = gsap.context(() => {
-      gsap.from('.gsap-skill-card', {
-        scale: 0.9,
-        y: 30,
-        opacity: 0,
-        duration: 0.6,
-        stagger: 0.05,
-        ease: 'back.out(1.4)',
-        clearProps: 'all'
-      });
-    }, sectionRef);
-    return () => ctx.revert();
-  }, [activeCategory]);
+  // Section header reveals once; the grid re-animates whenever the filter changes
+  useReveal(sectionRef, '.gsap-skill-head');
+  useReveal(
+    gridRef,
+    '.gsap-skill-card',
+    { from: { y: 36, scale: 0.94 }, duration: 0.9, stagger: 0.04 },
+    [activeCategory]
+  );
 
   const categories = ['All', 'Frontend', 'Mobile', 'Backend', 'Database', 'BaaS', 'Tools', 'Design'];
 
@@ -62,7 +56,9 @@ export const Skills: React.FC = () => {
       return (
         <img
           src={url}
-          alt={iconName}
+          alt=""
+          loading="lazy"
+          decoding="async"
           className={`w-7 h-7 object-contain transition-transform duration-300 group-hover:scale-125 ${
             isSpinning ? 'animate-spin-slow' : 'group-hover:rotate-6'
           } ${isDarkLogo ? 'filter invert brightness-200 contrast-125' : ''}`}
@@ -81,7 +77,7 @@ export const Skills: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
-        <div className="text-left mb-10 gsap-skill-card">
+        <div className="text-left mb-10 gsap-skill-head">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#12121a] border border-[#262636] font-mono text-xs font-semibold text-[#ff5e18] mb-3">
             <span className="text-gray-400">&lt;</span>
             TECHNOLOGY STACK
@@ -96,11 +92,12 @@ export const Skills: React.FC = () => {
         </div>
 
         {/* Category Filter Tabs */}
-        <div className="flex items-center justify-start gap-2 overflow-x-auto pb-4 mb-8 scrollbar-none gsap-skill-card">
+        <div className="flex items-center justify-start gap-2 overflow-x-auto pb-4 mb-8 scrollbar-none gsap-skill-head">
           {categories.map((cat) => (
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
+              aria-pressed={activeCategory.toLowerCase() === cat.toLowerCase()}
               className={`px-4 py-2 rounded-xl font-mono text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                 activeCategory.toLowerCase() === cat.toLowerCase()
                   ? 'bg-[#ff5e18] text-white box-orange-glow-sm scale-105'
@@ -113,7 +110,7 @@ export const Skills: React.FC = () => {
         </div>
 
         {/* Interactive 18 Skills Grid */}
-        <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4 sm:gap-5">
+        <div ref={gridRef} className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4 sm:gap-5">
           {filteredSkills.map((skill) => {
             const isSelected = selectedSkill?.name === skill.name;
 
@@ -121,6 +118,7 @@ export const Skills: React.FC = () => {
               <button
                 key={skill.name}
                 onClick={() => setSelectedSkill(skill)}
+                aria-pressed={isSelected}
                 className={`gsap-skill-card group relative bg-[#12121a] border rounded-2xl p-4 sm:p-5 flex flex-col items-center justify-center transition-all duration-300 hover:-translate-y-2 cursor-pointer overflow-hidden ${
                   isSelected
                     ? 'border-[#ff5e18] bg-[#161624] box-orange-glow-sm'

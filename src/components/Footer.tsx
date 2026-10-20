@@ -1,15 +1,12 @@
 import React from 'react';
 import { ArrowUp } from 'lucide-react';
+import { scrollToTarget } from '../lib/smoothScroll';
 
-interface FooterProps {
-  onNavigate: (sectionId: string) => void;
-}
-
-export const Footer: React.FC<FooterProps> = () => {
+export const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
 
   const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollToTarget('top');
   };
 
   return (
@@ -31,11 +28,11 @@ export const Footer: React.FC<FooterProps> = () => {
         {/* Scroll To Top Button */}
         <button
           onClick={scrollToTop}
-          className="w-10 h-10 rounded-xl bg-[#12121a] border border-[#262638] hover:border-[#ff5e18] text-gray-300 hover:text-white flex items-center justify-center transition-all cursor-pointer hover:box-orange-glow-sm shrink-0"
+          className="w-10 h-10 rounded-xl bg-[#12121a] border border-[#262638] hover:border-[#ff5e18] text-gray-300 hover:text-white flex items-center justify-center transition-all cursor-pointer hover:box-orange-glow-sm hover:-translate-y-1 shrink-0 group"
           aria-label="Scroll to top"
           title="Back to Top"
         >
-          <ArrowUp className="w-4 h-4 text-[#ff5e18]" />
+          <ArrowUp className="w-4 h-4 text-[#ff5e18] transition-transform duration-300 group-hover:-translate-y-0.5" />
         </button>
 
       </div>

@@ -1,33 +1,20 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { SERVICES_DATA } from '../data/portfolioData';
 import { Service } from '../types';
 import { Palette, Globe, Smartphone, Wrench, ArrowRight } from 'lucide-react';
-import gsap from 'gsap';
+import { useReveal } from '../hooks/useReveal';
 
 interface ServicesProps {
   onSelectService: (service: Service) => void;
 }
 
 export const Services: React.FC<ServicesProps> = ({ onSelectService }) => {
-  const sectionRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
 
-  useEffect(() => {
-    if (!sectionRef.current) return;
-    const ctx = gsap.context(() => {
-      gsap.from('.gsap-service-card', {
-        y: 40,
-        opacity: 0,
-        duration: 0.7,
-        stagger: 0.12,
-        ease: 'power3.out',
-        clearProps: 'all'
-      });
-    }, sectionRef);
-    return () => ctx.revert();
-  }, []);
+  useReveal(sectionRef, '.gsap-service-card', { stagger: 0.1 });
 
   const getServiceIcon = (service: Service) => {
-    const icon = service.iconName || service.icon || service.id;
+    const icon = service.iconName || service.id;
     switch (icon?.toLowerCase()) {
       case 'palette':
       case 'ui-ux-design':
@@ -67,8 +54,17 @@ export const Services: React.FC<ServicesProps> = ({ onSelectService }) => {
           {SERVICES_DATA.map((service) => (
             <div
               key={service.id}
+              role="button"
+              tabIndex={0}
+              aria-label={`Read more about ${service.title}`}
               onClick={() => onSelectService(service)}
-              className="gsap-service-card group relative bg-[#12121a] border border-[#222232] hover:border-[#ff5e18]/60 rounded-2xl p-6 sm:p-7 text-left transition-all duration-300 hover:-translate-y-2 hover:box-orange-glow flex flex-col justify-between cursor-pointer"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onSelectService(service);
+                }
+              }}
+              className="gsap-service-card group relative bg-[#12121a] border border-[#222232] hover:border-[#ff5e18]/60 rounded-2xl p-6 sm:p-7 text-left transition-all duration-300 hover:-translate-y-2 hover:box-orange-glow flex flex-col justify-between cursor-pointer focus-visible:outline-none focus-visible:border-[#ff5e18]"
             >
               {/* Top Accent Line */}
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#ff5e18] to-[#ff9800] rounded-t-2xl opacity-60 group-hover:opacity-100 transition-opacity" />
@@ -83,7 +79,7 @@ export const Services: React.FC<ServicesProps> = ({ onSelectService }) => {
                 </h3>
 
                 <p className="text-gray-400 text-xs sm:text-sm leading-relaxed mb-6">
-                  {service.description}
+                  {service.shortDesc}
                 </p>
               </div>
 

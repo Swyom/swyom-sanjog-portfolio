@@ -1,107 +1,117 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useState, useRef } from 'react';
 import { HERO_DATA, STATS_DATA } from '../data/portfolioData';
-import { ArrowRight, Download, Github, Linkedin, Twitter, Dribbble, Mail, Smile, Code, Star, Eye, Instagram } from 'lucide-react';
-import gsap from 'gsap';
+import { ArrowRight, Github, Linkedin, Twitter, Dribbble, Mail, Smile, Code, Star, Eye, Instagram } from 'lucide-react';
+import { gsap, hasFinePointer, prefersReducedMotion } from '../lib/gsap';
 import { getAssetUrl } from '../utils/assets';
+import { CountUp } from './CountUp';
+import { Magnetic } from './Magnetic';
 
 interface HeroProps {
   onNavigate: (sectionId: string) => void;
-  onOpenResume: () => void;
+  onOpenResume?: () => void;
+  /** True once the preloader has finished; the entrance animation waits for it. */
+  isReady?: boolean;
 }
 
-export const Hero: React.FC<HeroProps> = ({ onNavigate, onOpenResume }) => {
+export const Hero: React.FC<HeroProps> = ({ onNavigate, onOpenResume, isReady = true }) => {
   const [subtitleIndex, setSubtitleIndex] = useState(0);
   const [displayText, setDisplayText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
-  const [visitorCount, setVisitorCount] = useState<number | null>(null);
   const heroRef = useRef<HTMLDivElement>(null);
-  const avatarRef = useRef<HTMLDivElement>(null);
-
-  // Unique visitor counter logic (Counts 1 person 1 time starting strictly from 0)
-  useEffect(() => {
-    const hasVisited = localStorage.getItem('swyom_portfolio_visited');
-
-    if (!hasVisited) {
-      // First time unique visitor: increment global count from 0
-      fetch('https://api.counterapi.dev/v1/swyom-sanjog-unique-v1/visits/up')
-        .then((res) => res.json())
-        .then((data) => {
-          if (data && typeof data.count === 'number') {
-            setVisitorCount(data.count);
-            localStorage.setItem('swyom_portfolio_visited', 'true');
-          } else {
-            setVisitorCount(1);
-          }
-        })
-        .catch(() => {
-          setVisitorCount(1);
-          localStorage.setItem('swyom_portfolio_visited', 'true');
-        });
-    } else {
-      // Returning visitor: read count without incrementing
-      fetch('https://api.counterapi.dev/v1/swyom-sanjog-unique-v1/visits')
-        .then((res) => res.json())
-        .then((data) => {
-          if (data && typeof data.count === 'number') {
-            setVisitorCount(data.count);
-          } else {
-            setVisitorCount(1);
-          }
-        })
-        .catch(() => {
-          setVisitorCount(1);
-        });
-    }
-  }, []);
+  const portalRef = useRef<HTMLDivElement>(null);
 
   // Typing effect for subtitle
   useEffect(() => {
     const currentFullText = HERO_DATA.subtitles[subtitleIndex];
-    const typingSpeed = isDeleting ? 40 : 80;
+    const isComplete = !isDeleting && displayText === currentFullText;
+    const delay = isComplete ? 2000 : isDeleting ? 40 : 80;
 
     const timer = setTimeout(() => {
-      if (!isDeleting) {
+      if (isComplete) {
+        setIsDeleting(true);
+      } else if (!isDeleting) {
         setDisplayText(currentFullText.substring(0, displayText.length + 1));
-        if (displayText.length + 1 === currentFullText.length) {
-          setTimeout(() => setIsDeleting(true), 2000);
-        }
+      } else if (displayText.length <= 1) {
+        setDisplayText('');
+        setIsDeleting(false);
+        setSubtitleIndex((prev) => (prev + 1) % HERO_DATA.subtitles.length);
       } else {
         setDisplayText(currentFullText.substring(0, displayText.length - 1));
-        if (displayText.length - 1 === 0) {
-          setIsDeleting(false);
-          setSubtitleIndex((prev) => (prev + 1) % HERO_DATA.subtitles.length);
-        }
       }
-    }, typingSpeed);
+    }, delay);
 
     return () => clearTimeout(timer);
   }, [displayText, isDeleting, subtitleIndex]);
 
-  // GSAP Entrance Animations
-  useEffect(() => {
-    if (!heroRef.current) return;
+  // GSAP entrance timeline – held until the preloader fades out
+  useLayoutEffect(() => {
+    if (!heroRef.current || prefersReducedMotion()) return;
 
     const ctx = gsap.context(() => {
-      gsap.from('.hero-animate', {
-        y: 30,
-        opacity: 0,
-        duration: 0.6,
-        stagger: 0.1,
-        ease: 'power3.out',
-        clearProps: 'all',
-      });
+      const hidden = { autoAlpha: 0 };
+      if (!isReady) {
+        gsap.set('.hero-animate', { ...hidden, y: 30 });
+        gsap.set(portalRef.current, { ...hidden, scale: 0.85 });
+        gsap.set('.hero-stat', { ...hidden, y: 20 });
+        return;
+      }
 
-      gsap.from(avatarRef.current, {
-        scale: 0.85,
-        opacity: 0,
-        duration: 0.8,
-        delay: 0.2,
-        ease: 'elastic.out(1, 0.6)',
-        clearProps: 'all',
+      gsap
+        .timeline({ defaults: { ease: 'power3.out' } })
+        .fromTo(
+          '.hero-animate',
+          { autoAlpha: 0, y: 30 },
+          { autoAlpha: 1, y: 0, duration: 0.7, stagger: 0.1, clearProps: 'transform,opacity,visibility' }
+        )
+        .fromTo(
+          portalRef.current,
+          { autoAlpha: 0, scale: 0.85 },
+          { autoAlpha: 1, scale: 1, duration: 1.1, ease: 'elastic.out(1, 0.6)' },
+          0.15
+        )
+        .fromTo(
+          '.hero-stat',
+          { autoAlpha: 0, y: 20 },
+          { autoAlpha: 1, y: 0, duration: 0.6, stagger: 0.1, clearProps: 'transform,opacity,visibility' },
+          0.45
+        );
+
+      // Ambient glows drift slower than the page for a soft parallax depth
+      gsap.to('.hero-glow', {
+        yPercent: 35,
+        ease: 'none',
+        scrollTrigger: { trigger: heroRef.current, start: 'top top', end: 'bottom top', scrub: true },
       });
     }, heroRef);
 
     return () => ctx.revert();
+  }, [isReady]);
+
+  // Avatar follows the cursor slightly on desktop
+  useEffect(() => {
+    const hero = heroRef.current;
+    const portal = portalRef.current;
+    if (!hero || !portal || !hasFinePointer() || prefersReducedMotion()) return;
+
+    const xTo = gsap.quickTo(portal, 'x', { duration: 0.8, ease: 'power3.out' });
+    const yTo = gsap.quickTo(portal, 'y', { duration: 0.8, ease: 'power3.out' });
+
+    const handleMove = (e: PointerEvent) => {
+      const rect = hero.getBoundingClientRect();
+      xTo(((e.clientX - rect.left) / rect.width - 0.5) * 18);
+      yTo(((e.clientY - rect.top) / rect.height - 0.5) * 18);
+    };
+    const handleLeave = () => {
+      xTo(0);
+      yTo(0);
+    };
+
+    hero.addEventListener('pointermove', handleMove);
+    hero.addEventListener('pointerleave', handleLeave);
+    return () => {
+      hero.removeEventListener('pointermove', handleMove);
+      hero.removeEventListener('pointerleave', handleLeave);
+    };
   }, []);
 
   const getSocialIcon = (name: string) => {
@@ -126,8 +136,8 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate, onOpenResume }) => {
   return (
     <section id="home" ref={heroRef} className="relative pt-28 pb-16 md:pt-36 md:pb-24 overflow-hidden bg-grid-pattern font-outfit">
       {/* Background ambient lighting */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#ff5e18]/10 blur-[130px] rounded-full pointer-events-none" />
-      <div className="absolute top-1/3 right-10 w-[300px] h-[300px] bg-[#ff8c00]/10 blur-[100px] rounded-full pointer-events-none" />
+      <div className="hero-glow will-change-transform absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#ff5e18]/10 blur-[130px] rounded-full pointer-events-none" />
+      <div className="hero-glow will-change-transform absolute top-1/3 right-10 w-[300px] h-[300px] bg-[#ff8c00]/10 blur-[100px] rounded-full pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
@@ -151,8 +161,10 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate, onOpenResume }) => {
 
             {/* Subtitle with dynamic cursor */}
             <div className="hero-animate flex items-center gap-2 text-lg sm:text-xl md:text-2xl font-bold text-gray-200 min-h-[36px] sm:min-h-[40px]">
-              <span>{displayText || '\u00A0'}</span>
-              <span className="inline-block w-0.5 h-6 sm:h-7 bg-[#ff5e18] animate-pulse shrink-0" />
+              {/* Full role text for search engines & screen readers; the typing animation is decorative */}
+              <span className="sr-only">{HERO_DATA.subtitles.join(' ')}</span>
+              <span aria-hidden="true">{displayText || '\u00A0'}</span>
+              <span aria-hidden="true" className="inline-block w-0.5 h-6 sm:h-7 bg-[#ff5e18] animate-pulse shrink-0" />
             </div>
 
             {/* Bio paragraph */}
@@ -162,26 +174,29 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate, onOpenResume }) => {
 
             {/* Action Buttons */}
             <div className="hero-animate flex flex-wrap items-center gap-4 pt-1">
-              <button
-                onClick={() => onNavigate('work')}
-                className="group relative inline-flex items-center gap-2.5 px-6 py-3.5 rounded-lg font-bold text-sm text-white bg-[#ff5e18] hover:bg-[#ff702a] transition-all duration-300 box-orange-glow hover:scale-105 cursor-pointer"
-              >
-                VIEW MY WORK
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-              </button>
+              <Magnetic>
+                <button
+                  onClick={() => onNavigate('work')}
+                  className="group relative inline-flex items-center gap-2.5 px-6 py-3.5 rounded-lg font-bold text-sm text-white bg-[#ff5e18] hover:bg-[#ff702a] transition-all duration-300 box-orange-glow hover:scale-105 cursor-pointer"
+                >
+                  VIEW MY WORK
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                </button>
+              </Magnetic>
 
-              <a
-                href={getAssetUrl('assets/Swyom Resume.pdf')}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group inline-flex items-center gap-2.5 px-6 py-3.5 rounded-lg font-bold text-sm text-gray-200 bg-[#12121a] border border-[#2a2a3a] hover:border-[#ff5e18] hover:text-white transition-all duration-300 hover:scale-105 cursor-pointer"
-              >
-                RESUME
-                <Eye className="w-4 h-4 text-gray-400 group-hover:text-[#ff5e18] transition-colors" />
-              </a>
+              <Magnetic>
+                <button
+                  type="button"
+                  onClick={onOpenResume}
+                  className="group inline-flex items-center gap-2.5 px-6 py-3.5 rounded-lg font-bold text-sm text-gray-200 bg-[#12121a] border border-[#2a2a3a] hover:border-[#ff5e18] hover:text-white transition-all duration-300 hover:scale-105 cursor-pointer"
+                >
+                  RESUME
+                  <Eye className="w-4 h-4 text-gray-400 group-hover:text-[#ff5e18] transition-colors" />
+                </button>
+              </Magnetic>
             </div>
 
-            {/* Social Links Row & Unique Visitor Counter */}
+            {/* Social Links Row */}
             <div className="hero-animate flex flex-wrap items-center gap-3 pt-2">
               <div className="flex items-center gap-3">
                 {HERO_DATA.socials.map((social) => (
@@ -198,35 +213,14 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate, onOpenResume }) => {
                   </a>
                 ))}
               </div>
-
-              {/* Unique Profile Visitor Badge */}
-              <div
-                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#12121a] border border-[#262638] hover:border-[#ff5e18]/60 text-xs font-mono font-bold text-gray-300 transition-all shadow-lg hover:box-orange-glow-sm ml-0 sm:ml-2"
-                title="Unique Profile Visitors"
-              >
-                <div className="relative flex items-center justify-center">
-                  <span className="w-2 h-2 rounded-full bg-[#ff5e18]" />
-                  <span className="absolute w-3.5 h-3.5 rounded-full bg-[#ff5e18] animate-ping opacity-75" />
-                </div>
-                <Eye className="w-3.5 h-3.5 text-[#ff5e18]" />
-                <span>
-                  {visitorCount !== null ? (
-                    <>
-                      <strong className="text-white font-extrabold">{visitorCount.toLocaleString()}</strong> <span className="text-gray-400 font-normal">Visitors</span>
-                    </>
-                  ) : (
-                    <span className="text-gray-500 animate-pulse">Loading...</span>
-                  )}
-                </span>
-              </div>
             </div>
           </div>
 
           {/* Right Column: Avatar + Sleek Stats Row Below (Span 6) */}
-          <div ref={avatarRef} className="lg:col-span-6 flex flex-col items-center justify-center">
+          <div className="lg:col-span-6 flex flex-col items-center justify-center">
             
             {/* Avatar in Glowing Neon Portal Ring */}
-            <div className="relative w-64 h-64 xs:w-72 xs:h-72 sm:w-80 sm:h-80 md:w-96 md:h-96">
+            <div ref={portalRef} className="relative w-64 h-64 xs:w-72 xs:h-72 sm:w-80 sm:h-80 md:w-96 md:h-96">
               {/* Outer rotating HUD dash ring */}
               <div className="absolute -inset-4 rounded-full border border-dashed border-[#ff5e18]/40 animate-spin-slow pointer-events-none" />
 
@@ -240,16 +234,21 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate, onOpenResume }) => {
               <div className="relative w-full h-full rounded-full overflow-hidden border-2 border-[#ff5e18] box-orange-glow bg-[#0f0f18] p-1.5 z-10">
                 <img
                   src={HERO_DATA.avatarUrl}
+                  width={800}
+                  height={800}
+                  fetchPriority="high"
+                  decoding="async"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = HERO_DATA.avatarFallbackUrl;
+                    const img = e.currentTarget;
+                    if (img.src !== HERO_DATA.avatarFallbackUrl) img.src = HERO_DATA.avatarFallbackUrl;
                   }}
-                  alt="P. Swyom Sanjog Developer Portrait"
+                  alt="P. Swyom Sanjog, mobile app and Python full-stack developer"
                   className="w-full h-full object-cover rounded-full filter contrast-105 brightness-95 hover:scale-105 transition-transform duration-700"
                 />
               </div>
 
               {/* Floating Code Snippet Card (Hidden on Mobile, Visible on Tablet & Desktop) */}
-              <div className="hidden sm:block absolute sm:-bottom-4 sm:-right-12 md:-right-20 lg:-right-36 xl:-right-44 z-20 bg-[#12121a]/95 border border-[#2a2a3a] hover:border-[#ff5e18] p-3.5 rounded-xl shadow-2xl backdrop-blur-md font-mono text-left sm:w-64 transition-all duration-300 hover:scale-105">
+              <div className="animate-float hidden sm:block absolute sm:-bottom-4 sm:-right-12 md:-right-20 lg:-right-36 xl:-right-44 z-20 bg-[#12121a]/95 border border-[#2a2a3a] hover:border-[#ff5e18] p-3.5 rounded-xl shadow-2xl backdrop-blur-md font-mono text-left sm:w-64 transition-all duration-300 hover:scale-105">
                 {/* Top Bar */}
                 <div className="flex items-center gap-1.5 pb-1.5 mb-1.5 border-b border-[#222232] text-gray-400">
                   <span className="w-2 h-2 rounded-full bg-red-500/80 inline-block" />
@@ -276,13 +275,13 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate, onOpenResume }) => {
             <div className="mt-12 sm:mt-16 w-full flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-8 pt-6 border-t border-[#1f1f2e]">
               {STATS_DATA.map((stat, idx) => (
                 <React.Fragment key={stat.id}>
-                  <div className="flex items-center gap-3 group w-full max-w-[260px] sm:w-auto justify-start sm:justify-center p-2.5 sm:p-0 rounded-xl sm:rounded-none bg-[#12121a]/80 sm:bg-transparent border border-[#222232]/60 sm:border-none">
+                  <div className="hero-stat flex items-center gap-3 group w-full max-w-[260px] sm:w-auto justify-start sm:justify-center p-2.5 sm:p-0 rounded-xl sm:rounded-none bg-[#12121a]/80 sm:bg-transparent border border-[#222232]/60 sm:border-none">
                     <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#12121a] sm:bg-[#12121a] border border-[#2a2a3a] group-hover:border-[#ff5e18] flex items-center justify-center text-[#ff5e18] transition-all duration-300 group-hover:box-orange-glow-sm shrink-0">
                       {getStatIcon(stat.icon)}
                     </div>
                     <div className="text-left">
                       <div className="text-lg sm:text-2xl font-extrabold text-white tracking-tight flex items-baseline gap-0.5">
-                        <span>{stat.value}</span>
+                        <CountUp value={stat.value} start={isReady} duration={1.8} />
                         <span className="text-[#ff5e18]">{stat.suffix}</span>
                       </div>
                       <div className="text-[10px] sm:text-[11px] font-mono text-gray-400 font-semibold tracking-wide whitespace-nowrap">

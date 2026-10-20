@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { PROJECTS_DATA } from '../data/portfolioData';
 import { Project } from '../types';
-import { ArrowUpRight, ExternalLink, Github, Eye, Sparkles } from 'lucide-react';
-import gsap from 'gsap';
+import { ArrowUpRight, Eye } from 'lucide-react';
+import { useReveal } from '../hooks/useReveal';
 
 interface ProjectsProps {
   onSelectProject: (project: Project) => void;
@@ -10,22 +10,11 @@ interface ProjectsProps {
 
 export const Projects: React.FC<ProjectsProps> = ({ onSelectProject }) => {
   const [activeCategory, setActiveCategory] = useState<string>('All');
-  const sectionRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!sectionRef.current) return;
-    const ctx = gsap.context(() => {
-      gsap.from('.gsap-project-card', {
-        y: 40,
-        opacity: 0,
-        duration: 0.8,
-        stagger: 0.12,
-        ease: 'power3.out',
-        clearProps: 'all'
-      });
-    }, sectionRef);
-    return () => ctx.revert();
-  }, [activeCategory]);
+  useReveal(sectionRef, '.gsap-project-head');
+  useReveal(gridRef, '.gsap-project-card', { stagger: 0.1 }, [activeCategory]);
 
   const categories = ['All', 'Mobile Apps', 'Web Apps'];
 
@@ -38,7 +27,7 @@ export const Projects: React.FC<ProjectsProps> = ({ onSelectProject }) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4 gsap-project-card">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4 gsap-project-head">
           <div className="text-left">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#12121a] border border-[#262636] font-mono text-xs font-semibold text-[#ff5e18] mb-3">
               <span className="text-gray-400">&lt;</span>
@@ -57,6 +46,7 @@ export const Projects: React.FC<ProjectsProps> = ({ onSelectProject }) => {
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
+                  aria-pressed={activeCategory === cat}
                   className={`px-3.5 py-1.5 rounded-lg font-mono text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                     activeCategory === cat
                       ? 'bg-[#ff5e18] text-white box-orange-glow-sm'
@@ -81,12 +71,21 @@ export const Projects: React.FC<ProjectsProps> = ({ onSelectProject }) => {
         </div>
 
         {/* 6-Card Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+        <div ref={gridRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
           {filteredProjects.map((project) => (
             <div
               key={project.id}
+              role="button"
+              tabIndex={0}
+              aria-label={`View details for ${project.title}`}
               onClick={() => onSelectProject(project)}
-              className="gsap-project-card group relative bg-[#12121a] border border-[#222232] hover:border-[#ff5e18]/60 rounded-2xl p-5 text-left transition-all duration-300 hover:-translate-y-2 hover:box-orange-glow-sm flex flex-col justify-between overflow-hidden cursor-pointer"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onSelectProject(project);
+                }
+              }}
+              className="gsap-project-card group relative bg-[#12121a] border border-[#222232] hover:border-[#ff5e18]/60 rounded-2xl p-5 text-left transition-all duration-300 hover:-translate-y-2 hover:box-orange-glow-sm flex flex-col justify-between overflow-hidden cursor-pointer focus-visible:outline-none focus-visible:border-[#ff5e18]"
             >
               {/* Top Bar Accent Line */}
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#ff5e18] to-[#ff9800] rounded-t-2xl opacity-60 group-hover:opacity-100 transition-opacity" />
@@ -97,6 +96,12 @@ export const Projects: React.FC<ProjectsProps> = ({ onSelectProject }) => {
                   <img
                     src={project.image}
                     alt={project.title}
+                    loading="lazy"
+                    decoding="async"
+                    onError={(e) => {
+                      const img = e.currentTarget;
+                      if (project.fallbackImage && img.src !== project.fallbackImage) img.src = project.fallbackImage;
+                    }}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 filter brightness-90 contrast-105"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#12121a] via-[#12121a]/20 to-transparent" />

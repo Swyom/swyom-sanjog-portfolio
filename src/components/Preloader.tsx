@@ -1,32 +1,59 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { lockScroll, unlockScroll } from '../lib/scrollLock';
 
-export const Preloader: React.FC = () => {
+interface PreloaderProps {
+  /** Fired as the preloader starts fading out, so the page can begin its entrance. */
+  onComplete?: () => void;
+}
+
+export const Preloader: React.FC<PreloaderProps> = ({ onComplete }) => {
   const [progress, setProgress] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [shouldRender, setShouldRender] = useState<boolean>(true);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
+    // Keep the page still while the loader is on screen
+    lockScroll();
+    let unlocked = false;
+    const release = () => {
+      if (!unlocked) {
+        unlocked = true;
+        unlockScroll();
+      }
+    };
+
     // Smooth progress counter simulation
     const duration = 1400; // 1.4s stylish load animation
     const intervalTime = 25;
     const steps = duration / intervalTime;
     let currentStep = 0;
+    const timeouts: number[] = [];
 
-    const timer = setInterval(() => {
+    const timer = window.setInterval(() => {
       currentStep++;
       const currentProgress = Math.min(100, Math.round((currentStep / steps) * 100));
       setProgress(currentProgress);
 
       if (currentStep >= steps) {
-        clearInterval(timer);
-        setTimeout(() => {
-          setIsLoading(false);
-          setTimeout(() => setShouldRender(false), 700); // match transition duration
-        }, 150);
+        window.clearInterval(timer);
+        timeouts.push(
+          window.setTimeout(() => {
+            setIsLoading(false);
+            release();
+            onCompleteRef.current?.();
+            timeouts.push(window.setTimeout(() => setShouldRender(false), 700)); // match transition duration
+          }, 150)
+        );
       }
     }, intervalTime);
 
-    return () => clearInterval(timer);
+    return () => {
+      window.clearInterval(timer);
+      timeouts.forEach((t) => window.clearTimeout(t));
+      release();
+    };
   }, []);
 
   if (!shouldRender) return null;
@@ -36,6 +63,8 @@ export const Preloader: React.FC = () => {
       className={`fixed inset-0 z-[99999] bg-[#08080c] flex flex-col items-center justify-center select-none transition-all duration-700 ease-in-out ${
         isLoading ? 'opacity-100' : 'opacity-0 pointer-events-none scale-105'
       }`}
+      role="status"
+      aria-label="Loading portfolio"
     >
       {/* Background glow effects */}
       <div className="absolute inset-0 bg-grid-pattern opacity-20 pointer-events-none" />
@@ -43,7 +72,7 @@ export const Preloader: React.FC = () => {
 
       {/* Main Container */}
       <div className="relative z-10 flex flex-col items-center justify-center space-y-8 p-6 text-center">
-        
+
         {/* Stylish Glowing Orb Loader */}
         <div className="relative flex items-center justify-center p-6">
           <div className="loader-orb" />
@@ -51,9 +80,9 @@ export const Preloader: React.FC = () => {
 
         {/* Branding & Status text */}
         <div className="space-y-3">
-          <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-widest font-heading text-orange-glow">
+          <p className="text-xl sm:text-2xl font-extrabold text-white tracking-widest font-heading text-orange-glow">
             P. SWYOM SANJOG
-          </h2>
+          </p>
           <div className="flex items-center justify-center gap-2 text-xs font-mono text-[#ff5e18] font-bold">
             <span className="inline-block w-2 h-2 rounded-full bg-[#ff5e18] animate-ping" />
             <span>INITIALIZING PORTFOLIO</span>

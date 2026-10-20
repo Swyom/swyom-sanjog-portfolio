@@ -12,10 +12,29 @@ function syncAssetsAndFallbackPlugin(): Plugin {
       const assetsDir = path.resolve(rootDir, 'assets');
       const publicAssetsDir = path.resolve(rootDir, 'public/assets');
 
-      if (fs.existsSync(assetsDir)) {
-        fs.mkdirSync(publicAssetsDir, { recursive: true });
-        fs.cpSync(assetsDir, publicAssetsDir, { recursive: true });
-      }
+      if (!fs.existsSync(assetsDir)) return;
+
+      // Copy only new or changed files, and never let a locked file abort the dev server.
+      const syncDir = (fromDir: string, toDir: string) => {
+        fs.mkdirSync(toDir, { recursive: true });
+        for (const entry of fs.readdirSync(fromDir, { withFileTypes: true })) {
+          const src = path.join(fromDir, entry.name);
+          const dest = path.join(toDir, entry.name);
+          if (entry.isDirectory()) {
+            syncDir(src, dest);
+            continue;
+          }
+          try {
+            const srcStat = fs.statSync(src);
+            const destStat = fs.existsSync(dest) ? fs.statSync(dest) : null;
+            if (destStat && destStat.size === srcStat.size && destStat.mtimeMs >= srcStat.mtimeMs) continue;
+            fs.copyFileSync(src, dest);
+          } catch (err) {
+            this.warn(`Could not sync asset "${path.relative(assetsDir, src)}": ${(err as Error).message}`);
+          }
+        }
+      };
+      syncDir(assetsDir, publicAssetsDir);
     },
     closeBundle() {
       const rootDir = process.cwd();

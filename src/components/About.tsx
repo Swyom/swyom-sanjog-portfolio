@@ -1,30 +1,13 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { ABOUT_DATA } from '../data/portfolioData';
 import { Monitor, Code2, Zap, UserCheck, Terminal } from 'lucide-react';
-import gsap from 'gsap';
 import { getAssetUrl } from '../utils/assets';
+import { useReveal } from '../hooks/useReveal';
 
-interface AboutProps {
-  onOpenModal: () => void;
-}
+export const About: React.FC = () => {
+  const sectionRef = useRef<HTMLElement>(null);
 
-export const About: React.FC<AboutProps> = ({ onOpenModal }) => {
-  const sectionRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!sectionRef.current) return;
-    const ctx = gsap.context(() => {
-      gsap.from('.gsap-about-card', {
-        y: 45,
-        opacity: 0,
-        duration: 0.8,
-        stagger: 0.15,
-        ease: 'power3.out',
-        clearProps: 'all'
-      });
-    }, sectionRef);
-    return () => ctx.revert();
-  }, []);
+  useReveal(sectionRef, '.gsap-about-card', { stagger: 0.12 });
 
   const getFeatureIcon = (iconName: string) => {
     switch (iconName) {
@@ -69,14 +52,20 @@ export const About: React.FC<AboutProps> = ({ onOpenModal }) => {
               <Terminal className="w-4 h-4 text-[#ff5e18]" />
             </div>
 
-            {/* Image Container - Perfectly Fits imagepose.png */}
+            {/* Image Container - Perfectly Fits imagepose (display-sized WebP, PNG fallback) */}
             <div className="relative z-10 my-3 w-full h-64 sm:h-72 rounded-xl overflow-hidden border border-[#262638] bg-[#0c0c14] group-hover:border-[#ff5e18]/40 transition-colors">
               <img
-                src={getAssetUrl('assets/imagepose.png')}
-                alt="P. Swyom Sanjog Pose"
+                src={getAssetUrl('assets/imagepose.webp')}
+                alt="P. Swyom Sanjog at his developer workstation"
+                width={720}
+                height={960}
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500 filter brightness-95 contrast-105"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = getAssetUrl('assets/swyomIMG.png');
+                  const img = e.currentTarget;
+                  const fallback = getAssetUrl('assets/imagepose.png');
+                  if (!img.src.endsWith('imagepose.png')) img.src = fallback;
                 }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#12121a] via-transparent to-transparent opacity-50" />

@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { CONTACT_INFO } from '../data/portfolioData';
 import { Mail, MapPin, CheckCircle, Send, Sparkles, X, Phone, UserCheck } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { useReveal } from '../hooks/useReveal';
+import { useModal } from '../hooks/useModal';
+import { Portal } from './Portal';
 
 export const Contact: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -13,6 +16,11 @@ export const Contact: React.FC = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useReveal(sectionRef, '[data-reveal]', { stagger: 0.12 });
+  useModal(showSuccessPopup, () => setShowSuccessPopup(false));
 
   // Gmail specific regex validator: Must end in @gmail.com
   const isValidGmail = (email: string) => {
@@ -35,10 +43,12 @@ export const Contact: React.FC = () => {
     if (!isFormValid) return;
 
     setIsSubmitting(true);
+    setSubmitError(null);
+    let delivered = false;
 
     try {
-      // Send payload via FormSubmit AJAX to swyom82@gmail.com
-      await fetch('https://formsubmit.co/ajax/swyom82@gmail.com', {
+      // Send payload via FormSubmit AJAX
+      const res = await fetch(`https://formsubmit.co/ajax/${CONTACT_INFO.email}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -55,13 +65,17 @@ export const Contact: React.FC = () => {
           _template: 'table'
         })
       });
+      if (res.ok) {
+        const data = await res.json().catch(() => null);
+        delivered = delivered || data?.success === true || data?.success === 'true';
+      }
     } catch (err) {
       console.log('FormSubmit delivery log:', err);
     }
 
     try {
       // Secondary backup via Web3Forms API
-      await fetch('https://api.web3forms.com/submit', {
+      const res = await fetch('https://api.web3forms.com/submit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -78,11 +92,21 @@ export const Contact: React.FC = () => {
           to_email: 'swyom82@gmail.com'
         })
       });
+      if (res.ok) {
+        const data = await res.json().catch(() => null);
+        delivered = delivered || data?.success === true;
+      }
     } catch (err) {
       console.log('Web3Forms backup log:', err);
     }
 
     setIsSubmitting(false);
+
+    if (!delivered) {
+      setSubmitError(`Your message couldn't be sent right now. Please try again, or email ${CONTACT_INFO.email} directly.`);
+      return;
+    }
+
     setShowSuccessPopup(true);
 
     // Trigger Celebration Confetti!
@@ -98,14 +122,14 @@ export const Contact: React.FC = () => {
   };
 
   return (
-    <section id="contact" className="py-20 bg-[#08080c] relative overflow-hidden">
+    <section id="contact" ref={sectionRef} className="py-20 bg-[#08080c] relative overflow-hidden">
       {/* Ambient background glow */}
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#ff5e18]/10 rounded-full blur-[140px] pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
-        <div className="text-left mb-12">
+        <div data-reveal className="text-left mb-12">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-md bg-[#12121a] border border-[#262636] font-mono text-xs font-semibold text-[#ff5e18] mb-3">
             <span className="text-gray-400">&lt;</span>
             GET IN TOUCH
@@ -123,16 +147,19 @@ export const Contact: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
           {/* Left Column: Contact Form */}
-          <div className="lg:col-span-8 bg-[#12121a] border border-[#222232] rounded-2xl p-6 sm:p-8 text-left relative">
+          <div data-reveal className="lg:col-span-8 bg-[#12121a] border border-[#222232] rounded-2xl p-6 sm:p-8 text-left relative">
             <form onSubmit={handleSubmit} className="space-y-5">
               
               {/* Row 1: Name & Email */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-xs font-mono font-semibold text-gray-300 mb-2">
+                  <label htmlFor="contact-name" className="block text-xs font-mono font-semibold text-gray-300 mb-2">
                     Your Full Name <span className="text-[#ff5e18]">*</span>
                   </label>
                   <input
+                    id="contact-name"
+                    name="name"
+                    autoComplete="name"
                     type="text"
                     required
                     placeholder="e.g. Alex Johnson"
@@ -143,10 +170,13 @@ export const Contact: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-mono font-semibold text-gray-300 mb-2">
+                  <label htmlFor="contact-email" className="block text-xs font-mono font-semibold text-gray-300 mb-2">
                     Your Gmail Address <span className="text-[#ff5e18]">*</span>
                   </label>
                   <input
+                    id="contact-email"
+                    name="email"
+                    autoComplete="email"
                     type="email"
                     required
                     placeholder="your.name@gmail.com"
@@ -176,11 +206,14 @@ export const Contact: React.FC = () => {
               {/* Row 2: WhatsApp Number & Gender */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-xs font-mono font-semibold text-gray-300 mb-2 flex items-center gap-1.5">
+                  <label htmlFor="contact-phone" className="block text-xs font-mono font-semibold text-gray-300 mb-2 flex items-center gap-1.5">
                     <Phone className="w-3.5 h-3.5 text-[#ff5e18]" />
                     WhatsApp Mobile Number <span className="text-[#ff5e18]">*</span>
                   </label>
                   <input
+                    id="contact-phone"
+                    name="phone"
+                    autoComplete="tel"
                     type="tel"
                     required
                     placeholder="e.g. +91 98765 43210"
@@ -191,11 +224,13 @@ export const Contact: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-mono font-semibold text-gray-300 mb-2 flex items-center gap-1.5">
+                  <label htmlFor="contact-gender" className="block text-xs font-mono font-semibold text-gray-300 mb-2 flex items-center gap-1.5">
                     <UserCheck className="w-3.5 h-3.5 text-[#ff5e18]" />
                     Gender <span className="text-[#ff5e18]">*</span>
                   </label>
                   <select
+                    id="contact-gender"
+                    name="gender"
                     required
                     value={formData.gender}
                     onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
@@ -211,10 +246,12 @@ export const Contact: React.FC = () => {
 
               {/* Message Row */}
               <div>
-                <label className="block text-xs font-mono font-semibold text-gray-300 mb-2">
+                <label htmlFor="contact-message" className="block text-xs font-mono font-semibold text-gray-300 mb-2">
                   Your Message <span className="text-[#ff5e18]">*</span>
                 </label>
                 <textarea
+                  id="contact-message"
+                  name="message"
                   rows={5}
                   required
                   placeholder="Tell me about your project, timeline, and requirements..."
@@ -250,24 +287,34 @@ export const Contact: React.FC = () => {
                   </span>
                 )}
               </div>
+
+              {submitError && (
+                <p role="alert" className="text-[11px] font-mono text-rose-400 bg-rose-500/10 border border-rose-500/30 px-3 py-2 rounded-lg">
+                  ❌ {submitError}
+                </p>
+              )}
             </form>
           </div>
 
           {/* Right Column: Contact Info Cards */}
-          <div className="lg:col-span-4 space-y-4 text-left">
+          <div data-reveal className="lg:col-span-4 space-y-4 text-left">
             
             {/* Email Card */}
-            <div className="bg-[#12121a] border border-[#222232] hover:border-[#ff5e18]/60 p-5 rounded-2xl flex items-center gap-4 transition-all">
-              <div className="w-12 h-12 rounded-xl bg-[#181826] border border-[#2a2a3a] flex items-center justify-center text-[#ff5e18] shrink-0">
+            <a
+              href={`mailto:${CONTACT_INFO.email}?subject=${encodeURIComponent('Portfolio inquiry')}`}
+              className="group bg-[#12121a] border border-[#222232] hover:border-[#ff5e18]/60 p-5 rounded-2xl flex items-center gap-4 transition-all"
+              aria-label={`Email ${CONTACT_INFO.name} at ${CONTACT_INFO.email}`}
+            >
+              <div className="w-12 h-12 rounded-xl bg-[#181826] border border-[#2a2a3a] group-hover:border-[#ff5e18]/50 flex items-center justify-center text-[#ff5e18] shrink-0 transition-colors">
                 <Mail className="w-5 h-5" />
               </div>
               <div className="overflow-hidden">
                 <span className="text-[11px] font-mono font-semibold text-gray-400 block">Direct Email</span>
-                <span className="text-sm font-bold text-white truncate block">
+                <span className="text-sm font-bold text-white group-hover:text-[#ff5e18] truncate block transition-colors">
                   {CONTACT_INFO.email}
                 </span>
               </div>
-            </div>
+            </a>
 
             {/* Location Card */}
             <div className="bg-[#12121a] border border-[#222232] hover:border-[#ff5e18]/60 p-5 rounded-2xl flex items-center gap-4 transition-all">
@@ -299,39 +346,45 @@ export const Contact: React.FC = () => {
 
       {/* Message Sent Popup Confirmation Modal */}
       {showSuccessPopup && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
-          onClick={() => setShowSuccessPopup(false)}
-        >
+        <Portal>
           <div
-            className="relative w-full max-w-md bg-[#12121a] border border-[#ff5e18] rounded-2xl p-6 sm:p-8 text-center box-orange-glow"
-            onClick={(e) => e.stopPropagation()}
+            className="modal-backdrop fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+            onClick={() => setShowSuccessPopup(false)}
           >
-            {/* Close Button */}
-            <button
-              onClick={() => setShowSuccessPopup(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-lg bg-[#181826] border border-[#2a2a3c] text-gray-400 hover:text-white hover:border-[#ff5e18] transition-colors cursor-pointer"
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Message sent"
+              className="modal-panel relative w-full max-w-md bg-[#12121a] border border-[#ff5e18] rounded-2xl p-6 sm:p-8 text-center box-orange-glow"
+              onClick={(e) => e.stopPropagation()}
             >
-              <X className="w-4 h-4" />
-            </button>
+              {/* Close Button */}
+              <button
+                onClick={() => setShowSuccessPopup(false)}
+                aria-label="Close"
+                className="absolute top-4 right-4 p-1.5 rounded-lg bg-[#181826] border border-[#2a2a3c] text-gray-400 hover:text-white hover:border-[#ff5e18] transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
 
-            <div className="w-16 h-16 rounded-full bg-[#ff5e18]/20 border border-[#ff5e18] flex items-center justify-center mx-auto text-[#ff5e18] mb-4 box-orange-glow-sm">
-              <CheckCircle className="w-8 h-8 text-[#ff5e18]" />
+              <div className="w-16 h-16 rounded-full bg-[#ff5e18]/20 border border-[#ff5e18] flex items-center justify-center mx-auto text-[#ff5e18] mb-4 box-orange-glow-sm">
+                <CheckCircle className="w-8 h-8 text-[#ff5e18]" />
+              </div>
+
+              <h3 className="text-2xl font-extrabold text-white font-heading mb-2">Message Sent!</h3>
+              <p className="text-sm text-gray-300 mb-6 leading-relaxed">
+                Thank you for reaching out! Your inquiry has been sent directly to <strong className="text-[#ff5e18]">swyom82@gmail.com</strong>. P Swyom Sanjog will contact you back shortly.
+              </p>
+
+              <button
+                onClick={() => setShowSuccessPopup(false)}
+                className="w-full py-3.5 rounded-xl text-xs font-mono font-extrabold tracking-wider text-white bg-[#ff5e18] hover:bg-[#ff702a] box-orange-glow transition-all cursor-pointer"
+              >
+                OK, GOT IT
+              </button>
             </div>
-
-            <h3 className="text-2xl font-extrabold text-white font-heading mb-2">Message Sent!</h3>
-            <p className="text-sm text-gray-300 mb-6 leading-relaxed">
-              Thank you for reaching out! Your inquiry has been sent directly to <strong className="text-[#ff5e18]">swyom82@gmail.com</strong>. P Swyom Sanjog will contact you back shortly.
-            </p>
-
-            <button
-              onClick={() => setShowSuccessPopup(false)}
-              className="w-full py-3.5 rounded-xl text-xs font-mono font-extrabold tracking-wider text-white bg-[#ff5e18] hover:bg-[#ff702a] box-orange-glow transition-all cursor-pointer"
-            >
-              OK, GOT IT
-            </button>
           </div>
-        </div>
+        </Portal>
       )}
 
     </section>

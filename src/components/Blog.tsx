@@ -1,18 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BLOG_POSTS_DATA } from '../data/portfolioData';
 import { BlogPost } from '../types';
 import { Calendar, Clock, ArrowUpRight, ExternalLink, Loader2, Sparkles } from 'lucide-react';
+import { useReveal } from '../hooks/useReveal';
 
 const DEVTO_USERNAME = 'swyom_sanjog_4908464907cc';
 
 export const Blog: React.FC = () => {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useReveal(sectionRef, '[data-reveal]');
+  // Cards mount after the DEV.to request resolves, so animate them once loading ends
+  useReveal(sectionRef, '.gsap-blog-card', { stagger: 0.1 }, [loading]);
 
   useEffect(() => {
+    let active = true;
     // Fetch live articles from DEV.to API for user swyom_sanjog_4908464907cc
     fetch(`https://dev.to/api/articles?username=${DEVTO_USERNAME}`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`DEV.to request failed (${res.status})`);
+        return res.json();
+      })
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
           const devtoPosts: BlogPost[] = data.map((item: any) => ({
@@ -26,15 +36,21 @@ export const Blog: React.FC = () => {
             tags: item.tag_list || ['development', 'mobile'],
             url: item.url
           }));
-          setPosts(devtoPosts);
-        } else {
+          if (active) setPosts(devtoPosts);
+        } else if (active) {
           setPosts(BLOG_POSTS_DATA);
         }
       })
       .catch(() => {
-        setPosts(BLOG_POSTS_DATA);
+        if (active) setPosts(BLOG_POSTS_DATA);
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const openArticleUrl = (url?: string) => {
@@ -43,14 +59,14 @@ export const Blog: React.FC = () => {
   };
 
   return (
-    <section id="blog" className="py-20 bg-[#08080c] relative overflow-hidden">
+    <section id="blog" ref={sectionRef} className="py-20 bg-[#08080c] relative overflow-hidden">
       {/* Ambient lighting backdrop */}
       <div className="absolute top-1/3 right-0 w-[450px] h-[450px] bg-[#ff5e18]/5 blur-[130px] rounded-full pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 text-left">
+        <div data-reveal className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 text-left">
           <div>
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-md bg-[#12121a] border border-[#262636] font-mono text-xs font-semibold text-[#ff5e18] mb-3">
               <span className="text-gray-400">&lt;</span>
@@ -90,7 +106,7 @@ export const Blog: React.FC = () => {
               <div
                 key={post.id}
                 onClick={() => openArticleUrl(post.url)}
-                className="group relative bg-[#12121a]/90 backdrop-blur-md border border-[#222232] hover:border-[#ff5e18]/60 rounded-2xl p-5 text-left transition-all duration-300 hover:-translate-y-1.5 hover:box-orange-glow-sm flex flex-col justify-between overflow-hidden cursor-pointer"
+                className="gsap-blog-card group relative bg-[#12121a]/90 border border-[#222232] hover:border-[#ff5e18]/60 rounded-2xl p-5 text-left transition-all duration-300 hover:-translate-y-1.5 hover:box-orange-glow-sm flex flex-col justify-between overflow-hidden cursor-pointer"
               >
                 {/* Top Accent Bar */}
                 <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#ff5e18] to-[#ff9800] rounded-t-2xl opacity-60 group-hover:opacity-100 transition-opacity" />
@@ -101,6 +117,8 @@ export const Blog: React.FC = () => {
                     <img
                       src={post.coverImage}
                       alt={post.title}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 filter brightness-90 contrast-105"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1551650975-87deedd944c3?auto=format&fit=crop&w=1000&q=80';
@@ -169,7 +187,7 @@ export const Blog: React.FC = () => {
         )}
 
         {/* View More Blogs Option Button */}
-        <div className="flex justify-center pt-2">
+        <div data-reveal className="flex justify-center pt-2">
           <a
             href={`https://dev.to/${DEVTO_USERNAME}`}
             target="_blank"
